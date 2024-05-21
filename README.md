@@ -9,7 +9,7 @@ Do you find yourself torn between your team's preference for Zig and your loyalt
 Clone or download the repository.
 
 ### Compiler Settings
-Open the `compiler_settings.zig` file and edit the `path_to_zig` to match your Zig path. If you encounter an "AppAccessDenied" error, add `sudo` to your Zig command in the compiler settings.
+Open the `compiler_settings.zig` file and edit `path_to_zig` to match your Zig path. If you encounter an "AppAccessDenied" error, add `sudo` to your Zig command in the compiler settings.
 
 ### Build the Parser
 Run `zig build` to build the parser. After building, the parser executable can be found at: `./zig-out/bin/bf_zig_parser`.
