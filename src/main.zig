@@ -3,12 +3,12 @@ const fs = std.fs;
 const os = std.os;
 const fmt = std.fmt;
 const stdout = std.io.getStdOut().writer();
-const compiler_settings = @import("compiler_settings.zig");
+const parser_settings = @import("parser_settings.zig");
 const ext_print = @import("./lib/extended_print.zig");
 const builtin = @import("builtin");
 
 pub fn main() !void {
-    // get input args check and create compile command
+    // get input args check and create parse command
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -25,7 +25,7 @@ pub fn main() !void {
     try initialCheckForErrors();
 
     // create output path and file
-    try createOuputPathAndFile(compiler_settings.output_folder_path, compiler_settings.output_file_name_full);
+    try createOuputPathAndFile(parser_settings.output_folder_path, parser_settings.output_file_name_full);
     if (parse_command.log) try ext_print.printSuccessfulMessage("Created output file", .{});
 
     // read input file
@@ -34,54 +34,54 @@ pub fn main() !void {
 
     // parse bf file
     if (parse_command.log) try ext_print.printStartingMessage("Parsing bf file", .{});
-    try parseFile(input_file, compiler_settings.output_file_path, parse_command, compiler_settings.standard_parser_settings);
+    try parseFile(input_file, parser_settings.output_file_path, parse_command, parser_settings.standard_parser_settings);
     if (parse_command.log) try ext_print.printSuccessfulMessage("Parsed file", .{});
 
     // compile the produced Zig code
     if (parse_command.log) try ext_print.printStartingMessage("Compiling output Zig file", .{});
-    try runShellCommand(compiler_settings.shell_build_command);
+    try runShellCommand(parser_settings.shell_build_command);
     if (parse_command.log) try ext_print.printSuccessfulMessage("Compiled Zig file", .{});
 
     // run produced exe if requested
     if (parse_command.run) {
         if (parse_command.log) try ext_print.printStartingMessage("Running bf program", .{});
-        try runShellCommand(compiler_settings.shell_run_command);
+        try runShellCommand(parser_settings.shell_run_command);
     }
 
     // rename exe
-    const new_exe_name_len = parse_command.bf_path.len - compiler_settings.input_file_extension.len;
+    const new_exe_name_len = parse_command.bf_path.len - parser_settings.input_file_extension.len;
     const new_exe_name = parse_command.bf_path[0..new_exe_name_len];
-    try os.rename(compiler_settings.output_file_name, new_exe_name);
+    try os.rename(parser_settings.output_file_name, new_exe_name);
 
     // delete cache file
-    try fs.cwd().deleteFile(compiler_settings.output_file_name ++ ".o");
+    try fs.cwd().deleteFile(parser_settings.output_file_name ++ ".o");
 }
 
 /// check for non breaking initial values
 fn initialCheckForWarnings() !void {
     // check zig_version
     if (!version_in_range) {
-        try ext_print.printWarningMessage("Zig version not in range of known support: upper: '{d}.{d}', lower: '{d}.{d}', your version: '{d}.{d}'", .{ compiler_settings.upper_major_version, compiler_settings.upper_minor_version, compiler_settings.lower_major_version, compiler_settings.lower_minor_version, builtin.zig_version.major, builtin.zig_version.minor });
+        try ext_print.printWarningMessage("Zig version not in range of known support: upper: '{d}.{d}', lower: '{d}.{d}', your version: '{d}.{d}'", .{ parser_settings.upper_major_version, parser_settings.upper_minor_version, parser_settings.lower_major_version, parser_settings.lower_minor_version, builtin.zig_version.major, builtin.zig_version.minor });
     }
 
-    // check compile settings
-    if (compiler_settings.array_size > compiler_settings.array_size_warning) {
-        try ext_print.printWarningMessage("Array size very big: recommended upper maximum: '{d}', given: '{d}'", .{ compiler_settings.array_size_warning, compiler_settings.array_size });
+    // check parse settings
+    if (parser_settings.array_size > parser_settings.array_size_warning) {
+        try ext_print.printWarningMessage("Array size very big: recommended upper maximum: '{d}', given: '{d}'", .{ parser_settings.array_size_warning, parser_settings.array_size });
     }
 }
 
 /// check for breaking initial values
 fn initialCheckForErrors() !void {
     // ensure of type int
-    if (@typeInfo(compiler_settings.standard_parser_settings.intsize_type) != .Int) {
+    if (@typeInfo(parser_settings.standard_parser_settings.intsize_type) != .Int) {
         @compileError("Parser settings 'intsize_type' is not an integer");
     }
 }
 
 /// check Zig version
 const version_in_range: bool = blk: {
-    const major_in_range = (compiler_settings.lower_major_version <= builtin.zig_version.major) and (builtin.zig_version.major <= compiler_settings.upper_major_version);
-    const minor_in_range = (compiler_settings.lower_minor_version <= builtin.zig_version.minor) and (builtin.zig_version.minor <= compiler_settings.upper_minor_version);
+    const major_in_range = (parser_settings.lower_major_version <= builtin.zig_version.major) and (builtin.zig_version.major <= parser_settings.upper_major_version);
+    const minor_in_range = (parser_settings.lower_minor_version <= builtin.zig_version.minor) and (builtin.zig_version.minor <= parser_settings.upper_minor_version);
     break :blk major_in_range and minor_in_range;
 };
 
@@ -102,26 +102,26 @@ fn getParseCommand(args: [][]u8) ParseCommandError!ParseCommand {
         return error.TooManyArguments;
     }
 
-    // get the compile mode
+    // get the parse mode
     var run = false;
     var test_mode = false;
     var no_warnings = false;
     var no_logs = false;
 
     // TODO make more elegant
-    var it = std.mem.split(u8, args[1], compiler_settings.command_delimiter);
+    var it = std.mem.split(u8, args[1], parser_settings.command_delimiter);
     while (it.next()) |x| {
-        if (std.mem.eql(u8, x, compiler_settings.build_command)) {
+        if (std.mem.eql(u8, x, parser_settings.build_command)) {
             continue;
-        } else if (std.mem.eql(u8, x, compiler_settings.run_command)) {
+        } else if (std.mem.eql(u8, x, parser_settings.run_command)) {
             run = true;
-        } else if (std.mem.eql(u8, x, compiler_settings.test_command)) {
+        } else if (std.mem.eql(u8, x, parser_settings.test_command)) {
             test_mode = true;
-        } else if (std.mem.eql(u8, x, compiler_settings.no_warnings_command)) {
+        } else if (std.mem.eql(u8, x, parser_settings.no_warnings_command)) {
             no_warnings = true;
-        } else if (std.mem.eql(u8, x, compiler_settings.no_log_command)) {
+        } else if (std.mem.eql(u8, x, parser_settings.no_log_command)) {
             no_logs = true;
-        } else if (std.mem.eql(u8, x, compiler_settings.help_command)) {
+        } else if (std.mem.eql(u8, x, parser_settings.help_command)) {
             try printHelpMessage();
         } else {
             try ext_print.printErrorMessage("Build command invalid: '{s}'", .{x});
@@ -131,19 +131,19 @@ fn getParseCommand(args: [][]u8) ParseCommandError!ParseCommand {
     }
 
     // check file extention
-    if (args[2].len < compiler_settings.input_file_extension.len) {
-        try ext_print.printErrorMessage("File extention not valid: expected '{s}', got '{s}'", .{ compiler_settings.input_file_extension, args[2] });
+    if (args[2].len < parser_settings.input_file_extension.len) {
+        try ext_print.printErrorMessage("File extention not valid: expected '{s}', got '{s}'", .{ parser_settings.input_file_extension, args[2] });
         try printHelpMessage();
         return error.FileExtentionInvalid;
-    } else if (args[2].len == compiler_settings.input_file_extension.len) {
+    } else if (args[2].len == parser_settings.input_file_extension.len) {
         try ext_print.printErrorMessage("No file name provided", .{});
         try printHelpMessage();
         return error.InvalidFileName;
     }
 
-    const file_extension_start_index = args[2].len - compiler_settings.input_file_extension.len;
-    if (!std.mem.eql(u8, args[2][file_extension_start_index..], compiler_settings.input_file_extension)) {
-        try ext_print.printErrorMessage("File extention not valid: expected '{s}', got '{s}'", .{ compiler_settings.input_file_extension, args[2][file_extension_start_index..] });
+    const file_extension_start_index = args[2].len - parser_settings.input_file_extension.len;
+    if (!std.mem.eql(u8, args[2][file_extension_start_index..], parser_settings.input_file_extension)) {
+        try ext_print.printErrorMessage("File extention not valid: expected '{s}', got '{s}'", .{ parser_settings.input_file_extension, args[2][file_extension_start_index..] });
         try printHelpMessage();
         return error.FileExtentionInvalid;
     }
@@ -167,7 +167,7 @@ const ParseCommandError = error{
 
 const ParseCommand = struct {
     run: bool, // run after build
-    test_mode: bool, // compile mode
+    test_mode: bool, // test mode
     warnings: bool, // ignore warnings
     log: bool, // ignore log
     bf_path: []const u8, // path to BrainFuck file
@@ -177,11 +177,11 @@ const ParseCommand = struct {
 fn printHelpMessage() !void {
     try stdout.print(
         \\ --------------------------------------------------------------------
-        \\Usage: BF_Zig_Compiler [{s}-option-option...] [file path]
+        \\Usage: bf_zig_parser [{s}-option-option...] [file path]
         \\
         \\The possible {s} options are:
         \\  -{s}            runs the Zig file after building
-        \\  -{s}           adds test commands to compiled file
+        \\  -{s}           adds test commands to parsed file
         \\  -{s}     add to ignore warnings
         \\  -{s}          add disable log statements
         \\  -{s}           print all available commands
@@ -189,14 +189,14 @@ fn printHelpMessage() !void {
         \\The filepath has to end with {s}
         \\
     , .{
-        compiler_settings.build_command,
-        compiler_settings.build_command,
-        compiler_settings.run_command,
-        compiler_settings.test_command,
-        compiler_settings.no_warnings_command,
-        compiler_settings.no_log_command,
-        compiler_settings.help_command,
-        compiler_settings.input_file_extension,
+        parser_settings.build_command,
+        parser_settings.build_command,
+        parser_settings.run_command,
+        parser_settings.test_command,
+        parser_settings.no_warnings_command,
+        parser_settings.no_log_command,
+        parser_settings.help_command,
+        parser_settings.input_file_extension,
     });
 }
 
@@ -212,7 +212,7 @@ fn createOuputPathAndFile(output_folder_path: []const u8, file_name: []const u8)
 }
 
 /// main function to parse the bf file
-fn parseFile(file: fs.File, output_file_path: []const u8, parse_command: ParseCommand, comptime parser_settings: compiler_settings.ParserSettings) !void {
+fn parseFile(file: fs.File, output_file_path: []const u8, parse_command: ParseCommand, comptime parse_settings: parser_settings.ParserSettings) !void {
     // init input file reader
     var buf_reader = std.io.bufferedReader(file.reader());
     var in_stream = buf_reader.reader();
@@ -222,12 +222,12 @@ fn parseFile(file: fs.File, output_file_path: []const u8, parse_command: ParseCo
     defer output_file.close();
 
     // write header
-    try writeStringToFile(output_file, parser_settings.header_string);
+    try writeStringToFile(output_file, parse_settings.header_string);
 
     // initialise loop variables
-    var indent_number: parser_settings.intsize_type = 1;
+    var indent_number: parse_settings.intsize_type = 1;
     var lastChar: AsciiCharCodes = AsciiCharCodes.new_line;
-    var combine: parser_settings.intsize_type = 0;
+    var combine: parse_settings.intsize_type = 0;
 
     var finished_flag = true;
 
@@ -251,7 +251,7 @@ fn parseFile(file: fs.File, output_file_path: []const u8, parse_command: ParseCo
         // prevent integer 'combine' from overflow
         const combine_overflow_protection = combine +% 1;
         if (combine_overflow_protection <= 0) {
-            try ext_print.printErrorMessage("Integer overflow. Increase the size of 'intsize_type' in parser_settings to allow for more combined characters\n", .{});
+            try ext_print.printErrorMessage("Integer overflow. Increase the size of 'intsize_type' in parse_settings to allow for more combined characters\n", .{});
             return error.IntergerOverFlow;
         }
         combine += 1;
@@ -269,40 +269,40 @@ fn parseFile(file: fs.File, output_file_path: []const u8, parse_command: ParseCo
         // match char
         switch (lastChar) {
             AsciiCharCodes.arrow_right => { // > operator
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try std.fmt.format(output_file.writer(), "index += {d};\n", .{combine});
             },
             AsciiCharCodes.arrow_left => { // < operator
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try std.fmt.format(output_file.writer(), "index -= {d};\n", .{combine});
             },
 
             AsciiCharCodes.plus => { // + operator
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try std.fmt.format(output_file.writer(), "array[index] +%= {d};\n", .{combine});
             },
             AsciiCharCodes.minus => { // - operator
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try std.fmt.format(output_file.writer(), "array[index] -%= {d};\n", .{combine});
             },
 
             AsciiCharCodes.comma => { // , operator
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try writeStringToFile(output_file, "array[index] = try ask_user();\n");
             },
             AsciiCharCodes.period => { // . operator
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try writeStringToFile(output_file, "try stdout.print(\"{c}\", .{array[index]});\n");
             },
 
             AsciiCharCodes.square_bracket_open => { // [ operator
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try std.fmt.format(output_file.writer(), "for (0..max_iterations) |ii{d}|{{if(ii{d} >  max_iterations - 2){{return error.InfiniteLoop;}}else if(array[index] == 0){{break;}}\n", .{ indent_number, indent_number });
 
                 // prevent integer overflow
                 const indent_overflow_protection = indent_number +% 1;
                 if (indent_overflow_protection <= 0) {
-                    try ext_print.printErrorMessage("Integer overflow. Increase the size of 'intsize_type' in parser_settings to allow for more combined characters\n", .{});
+                    try ext_print.printErrorMessage("Integer overflow. Increase the size of 'intsize_type' in parse_settings to allow for more combined characters\n", .{});
                     return error.IntergerOverFlow;
                 }
                 indent_number += 1;
@@ -314,22 +314,22 @@ fn parseFile(file: fs.File, output_file_path: []const u8, parse_command: ParseCo
                     return error.NegativeIndent;
                 }
                 indent_number -= 1;
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try writeStringToFile(output_file, "}\n");
             },
             AsciiCharCodes.new_line => { // \n operator new line
-                try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                 try writeStringToFile(output_file, "\n");
             },
             AsciiCharCodes.question_mark => { // ? operator print current location
                 if (parse_command.test_mode) {
-                    try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                    try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                     try writeStringToFile(output_file, "try stdout.print(\"{d}\", .{index});\n");
                 }
             },
             AsciiCharCodes.exclamation_mark => { // ! operator print current value as number
                 if (parse_command.test_mode) {
-                    try writeIndentation(output_file, indent_number, parser_settings.indent_spacing);
+                    try writeIndentation(output_file, indent_number, parse_settings.indent_spacing);
                     try writeStringToFile(output_file, "try stdout.print(\"{d}\", .{array[index]});\n");
                 }
             },
@@ -350,7 +350,7 @@ fn parseFile(file: fs.File, output_file_path: []const u8, parse_command: ParseCo
     }
 
     // write footer
-    try writeStringToFile(output_file, parser_settings.footer_string);
+    try writeStringToFile(output_file, parse_settings.footer_string);
 }
 
 /// write string to file
