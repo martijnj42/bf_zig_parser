@@ -8,19 +8,18 @@ Do you find yourself torn between your team's preference for Zig and your loyalt
 ### Download Files
 Clone or download the repository.
 
-### Compiler Settings
-Open the `compiler_settings.zig` file and edit `path_to_zig` to match your Zig path. If you encounter an "AppAccessDenied" error, add `sudo` to your Zig command in the compiler settings.
+### Parser Settings
+Open the `parser_settings.zig` file and edit `path_to_zig` to match your Zig path. If you encounter an "AppAccessDenied" error, add `sudo` to your Zig command in the parser settings.
 
 ### Build the Parser
 Run `zig build` to build the parser. After building, the parser executable can be found at: `./zig-out/bin/bf_zig_parser`.
 
 ## Usage
-Use the following command to compile your BrainFuck code to Zig:
+Use the following command to parse your BrainFuck code to Zig:
 
-Add `-run` directly behind `build` to run the executable immediately. Add `-test` directly behind `build` (stackable) to compile test commands in the executable.
+Add `-run` directly behind `build` to run the executable immediately. Add `-test` directly behind `build` (stackable) to parse test commands in the executable.
 
 ## Features
-- The generated Zig code is formatted with spacing, making it more readable and easier to debug your BrainFuck code.
 - Loops are implemented with a maximum to catch infinite loops (change `maximum_iterations` to increase the amount of cycles).
 - Use `?` and `!` in test mode to print the current index and cell value as an integer, respectively.
 - Colored print statements for extra clarity.
@@ -28,6 +27,7 @@ Add `-run` directly behind `build` to run the executable immediately. Add `-test
 ## Limitations
 - `sudo` access needed
 - Runs shell in empty environment
+- No support for spaces in path for shell commands
 
 ## Optimizations
 - Repeated operators will be combined. For example, `+++++` is interpreted as `+5`.
