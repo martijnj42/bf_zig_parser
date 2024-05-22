@@ -448,6 +448,9 @@ fn combinableChar(lastChar: AsciiCharCodes, char: AsciiCharCodes) bool {
 
 /// run a shell command
 fn runShellCommand(comptime command_string: []const u8) !void {
+    //TODO use usage .env variables
+    //TODO add support for spaces in path
+
     // check if input string fits inside buffer
     if (command_string.len == 0) {
         try stdout.print("No input string provided\n", .{});
